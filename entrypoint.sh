@@ -41,5 +41,10 @@ fi
 echo "[entrypoint] 启动 omservice ..."
 /usr/local/bin/omservice /etc/omservice.conf
 
-# 6. 前台挂住容器并输出服务日志（tail -F 会等待日志文件出现）
+# 6. 等服务日志文件出现后再前台跟随（保持容器存活；
+#    直接 tail -F 不存在的文件，GNU tail 可能报 "giving up on this name" 并退出，导致容器重启循环）
+echo "[entrypoint] omservice 已启动，等待服务日志 ..."
+while [ ! -f /var/log/OMapService.log ]; do
+    sleep 2
+done
 exec tail -F /var/log/OMapService.log
