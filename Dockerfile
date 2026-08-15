@@ -14,8 +14,11 @@ RUN sed -e 's|^mirrorlist=|#mirrorlist=|g' \
         -e 's|^#baseurl=http://mirror.centos.org/$contentdir/$releasever|baseurl=https://mirrors.aliyun.com/centos-vault/7.9.2009|g' \
         -i.bak /etc/yum.repos.d/CentOS-*.repo \
     && yum makecache \
+    # EPEL7 归档源（提供 proxychains-ng：omservice 不认 HTTP_PROXY 环境变量，用它强制走代理）
+    && printf '[epel]\nname=EPEL7-archive\nbaseurl=https://mirrors.aliyun.com/epel-archive/7/x86_64/\nenabled=1\ngpgcheck=0\n' \
+        > /etc/yum.repos.d/epel.repo \
     # CentOS7 官方配套数据库为 MariaDB
-    && yum install -y mariadb-server \
+    && yum install -y mariadb-server proxychains-ng \
     # 官方文档推荐地址（当前指向 3.3.3-3）；如需固定/更新版本可改为如：
     # https://download.ovital.com/pub/omservice-4.0.3-2.x86_64.rpm
     && rpm -ivh https://download.ovital.com/pub/omservice-latest.x86_64.rpm \

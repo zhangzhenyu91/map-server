@@ -101,7 +101,9 @@ scp -r "map/<地图ID>" user@服务器IP:/路径/到/本目录/data/map/
 
 ## 四、代理打通（HTTP 端口代理 7890）
 
-omservice 做「本地代理」时，由**服务器侧进程**请求谷歌瓦片，必须让它走上宿主机的 7890 代理。按顺序来：
+omservice 做「本地代理」时，由**服务器侧进程**请求谷歌瓦片，必须让它走上宿主机的 7890 代理。
+
+**已实测确认：omservice 不认 `HTTP_PROXY` 环境变量**（C++ 服务常见），因此镜像已内置 **proxychains-ng**（LD_PRELOAD 劫持 `connect()`，不依赖程序自身支持），启动 omservice 时自动经宿主机 7890 出网，无需手工配置。
 
 ### 1. 放开 Clash 的局域网访问
 
@@ -115,53 +117,28 @@ allow-lan: true
 
 改完重启 Clash。宿主机上验证：`curl -x http://127.0.0.1:7890 -I https://mt0.google.com/vt/lyrs=s\&x=1\&y=1\&z=1` 能通。
 
-### 2. 先试 HTTP_PROXY 环境变量（最简单）
+### 2. 工作原理（已固化在镜像里，仅供了解）
 
-取消 `docker-compose.yml` 中 `HTTP_PROXY/HTTPS_PROXY` 两行的注释（已用 `host.docker.internal:7890` 预置好），然后：
+- 镜像装有 proxychains-ng；`entrypoint.sh` 启动 omservice 时自动生成 `/etc/proxychains.conf`（宿主机地址优先取 `host.docker.internal`，兜底取容器默认网关；端口取环境变量 `PROXY_PORT`，默认 7890），然后用 `proxychains4` 拉起 omservice。
+- 配置里已用 `localnet` 排除 127.0.0.0/8 与私网段，**omservice 连本机 MySQL 不会走代理**。
+- 想换代理端口：compose 的 `environment` 里加 `PROXY_PORT: "端口号"`；想彻底停用代理（比如改用 TUN 透明代理）：设 `PROXY_PORT: "0"`。
 
-```bash
-docker compose up -d   # 重建容器使环境变量生效
-```
-
-### 3. 验证（分两层，第二层才是关键）
+### 3. 验证
 
 ```bash
-# 第一层：容器出网 OK（curl 自己会读环境变量，通过不代表 omservice 走代理）
-docker exec omservice curl -I "https://mt0.google.com/vt/lyrs=s&x=1&y=1&z=1"
+# 容器日志应显示：启动 omservice（经 proxychains -> http://172.x.0.1:7890）...
+docker compose logs | grep proxychains
 ```
 
-- **第二层（决定性）**：客户端登录企业服务器、切到谷歌卫星图层加载时，**看 Clash 的日志/连接面板**：
-  - 出现 `mt*.google.com` 连接记录 → omservice 走了代理，完成 ✅
-  - 没有任何记录（且客户端瓦片加载失败）→ omservice 不读环境变量（C++ 服务常见），走第 4 条 ❌
+客户端登录企业服务器、切到谷歌卫星图层加载时，**看 Clash 的日志/连接面板**：出现 `mt*.google.com` 连接记录即成功 ✅。
 
-### 4. 环境变量不生效：用 proxychains 强制代理
+### 4. 备选：Clash 开 TUN 模式
 
-proxychains 通过 LD_PRELOAD 劫持网络连接，不依赖程序自身是否支持代理：
-
-```bash
-docker exec -it omservice bash
-
-# 安装（CentOS6 EPEL；若 yum 找不到该包，需放入静态编译的 proxychains4 二进制）
-yum install -y epel-release && yum install -y proxychains-ng
-
-# 配置：指向宿主机 7890（自动取容器网关 IP，即宿主机）
-GW=$(ip route | awk '/default/ {print $3}') && printf '[ProxyList]\nhttp %s 7890\n' "$GW" > /etc/proxychains.conf
-
-# 用 proxychains 重启 omservice
-service omservice stop
-proxychains4 service omservice start
-exit
-```
-
-再次执行第 3 步第二层的验证。注意：**容器重建后需重做**，要固化可基于方案 B 的 Dockerfile 把 proxychains 装进去、并改启动脚本为 `proxychains4 service omservice start`。
-
-### 5. 一劳永逸：Clash 开 TUN 模式
-
-如果 Clash 支持 TUN/增强模式，直接接管宿主机全局网络，所有容器流量自动走代理，以上 1~4 全部不用配。
+如果 Clash 支持 TUN/增强模式，直接接管宿主机全局网络，容器流量自动走代理。用此方式时在 compose 里设 `PROXY_PORT: "0"` 关掉 proxychains，避免重复代理。
 
 ### 自定义地图参数不受影响
 
-无论走哪条路，第三节的自定义地图参数都不变（主机名仍是 `mt{$serverpart}.google.com`）——代理发生在网络层，不改动地图配置。
+代理发生在网络层，不改动地图配置（主机名仍是 `mt{$serverpart}.google.com`）。
 
 ## 五、方案 B：自建最新版镜像（当前 compose 默认）
 

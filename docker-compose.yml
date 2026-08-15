@@ -30,10 +30,8 @@ services:
       - "host.docker.internal:host-gateway"   # 容器内用此域名访问宿主机（代理端口在宿主机上）
     environment:
       TZ: Asia/Shanghai
-      # —— 代理：宿主机 HTTP 端口代理 7890（Clash 等）——
-      # 前置：Clash 需开启 allow-lan（或绑定 0.0.0.0），容器才能经宿主机 IP 访问 7890。
-      # 注意：omservice 是否遵循 HTTP_PROXY 环境变量未经官方确认，需按 README「四、代理打通」实测；
-      # 不生效时用 README 中的 proxychains 方案。
-      HTTP_PROXY: "http://host.docker.internal:7890"
-      HTTPS_PROXY: "http://host.docker.internal:7890"
-      # NO_PROXY: "localhost,127.0.0.1"
+      # —— 代理：宿主机 HTTP 端口代理（Clash 7890）——
+      # 已实测 omservice 不认 HTTP_PROXY 环境变量，镜像内置 proxychains 强制走代理（见 README 第四节）。
+      # PROXY_PORT：宿主机代理端口，默认 7890；设为 "0" 则停用代理（如 Clash 已开 TUN 透明代理）。
+      # 前置：Clash 需开启 allow-lan（监听 0.0.0.0），容器才能经宿主机内网 IP 访问该端口。
+      PROXY_PORT: "7890"
