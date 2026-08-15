@@ -22,7 +22,8 @@ services:
       - ./data/mysql:/var/lib/mysql   # MySQL 数据持久化（用户、同步数据都在这里）
       - ./data/map:/root/map          # 自定义地图存放目录（谷歌卫星图配置拷到这里）
       # 首次启动不要挂载此文件（宿主机没有该文件时 docker 会创建成目录）。
-      # 先启动一次，然后执行：docker cp omservice:/etc/omservice.conf ./conf/omservice.conf
+      # 先启动一次，然后执行：
+      #   mkdir -p conf && docker cp omservice:/etc/omservice.conf ./conf/omservice.conf
       # 再取消下行注释并 docker compose up -d 重建容器：
       # - ./conf/omservice.conf:/etc/omservice.conf
     extra_hosts:
