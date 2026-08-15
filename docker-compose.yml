@@ -16,6 +16,8 @@ services:
     networks:
       - 1panel-network
     restart: always
+    cap_add:
+      - SYS_PTRACE   # 允许容器内 strace 附加到进程（排障用；不需要时可去掉）
     ports:
       - "1616:1616"   # 奥维企业服务器端口（管理控制台、客户端均通过此端口连接）
     volumes:
