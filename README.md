@@ -121,6 +121,7 @@ allow-lan: true
 
 - 镜像装有 proxychains-ng；`entrypoint.sh` 启动 omservice 时自动生成 `/etc/proxychains.conf`（宿主机地址优先取 `host.docker.internal`，兜底取容器默认网关；端口取环境变量 `PROXY_PORT`，默认 7890），然后用 `proxychains4` 拉起 omservice。
 - 配置里已用 `localnet` 排除 127.0.0.0/8 与私网段，**omservice 连本机 MySQL 不会走代理**。
+- **不要给 proxychains 开 `proxy_dns`**（本镜像默认不开）：实测它的 DNS hook 会导致 omservice 域名解析卡死，客户端瓦片永远停在"正在下载"。本方案只拦 `connect()`，DNS 由 omservice 正常解析。前提：部署环境 DNS 未被污染（国内云厂商 DNS 解析谷歌域名通常返回真实 IP）；若被污染，改用第 4 条的 TUN 方案。
 - 想换代理端口：compose 的 `environment` 里改 `PROXY_PORT`；自动探测的代理 IP 不对时（比如 Clash 在另一台机器或监听宿主机内网 IP），用 `PROXY_HOST` 手动指定数字 IP（如 `PROXY_HOST: "10.2.24.13"`）；想彻底停用代理（比如改用 TUN 透明代理）：设 `PROXY_PORT: "0"`。
 
 ### 3. 验证
