@@ -163,17 +163,22 @@ exit
 
 无论走哪条路，第三节的自定义地图参数都不变（主机名仍是 `mt{$serverpart}.google.com`）——代理发生在网络层，不改动地图配置。
 
-## 五、方案 B：自建最新版镜像（可选）
-
-社区镜像停留在 omservice 3.3.3。需要官方最新版（如 4.x 的模型加载等新特性）时：
+## 五、方案 B：自建最新版镜像（当前 compose 默认）
 
 ```bash
-# 编辑 docker-compose.yml：注释 image 行，启用 build: .
 docker compose build
 docker compose up -d
 ```
 
-Dockerfile 基于 CentOS 6.10 + 官方最新 RPM（`omservice-latest.x86_64.rpm`）。CentOS7 容器有 systemd 兼容问题（社区项目已踩坑），故不切换。
+> 若在 Apple Silicon Mac 上本地构建（服务器是 x86_64），需指定平台：`docker build --platform linux/amd64 -t omservice .`；
+> 直接在 x86_64 云服务器上 `docker compose build` 则不需要。
+
+要点说明：
+
+- **必须用 CentOS 7**：当前官方 RPM（`omservice-latest` ≈ 3.3.3-3）需要 glibc 2.17 / GLIBCXX_3.4.14，CentOS 6.10（glibc 2.12）装不上——社区镜像当年能装是因为那时的 RPM 还是 el6 构建，官方的 el6 包只出到 2.7.6（无地图服务）。
+- CentOS 7 已 EOL，Dockerfile 里已把 yum 源换成阿里云 centos-vault 7.9.2009（centos:7 官方镜像的 repo 是 altarch 路径，sed 已覆盖；清华源对部分 IP 段 403，备选可换回 tuna）。
+- **绕过 systemd**：容器里 systemctl 不可用，入口脚本 `entrypoint.sh` 直接 `mysqld_safe` 拉起 MariaDB、执行 `initomservice.sh` 初始化 ovsrv 库、然后启动 omservice 二进制（它自身会 daemonize）。数据库初始 root 密码被官方脚本设为 `ovital`，与 `omservice.conf` 默认值一致。
+- 要固定版本（如 4.0.3-2），改 Dockerfile 里 RPM 的 URL 即可，版本列表见 https://download.ovital.com/pub/ 。
 
 ## 六、备份与恢复
 
