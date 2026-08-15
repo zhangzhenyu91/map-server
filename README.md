@@ -198,9 +198,11 @@ docker restart omservice
 
 - **控制台连不上**：查安全组/防火墙 1616；`docker logs omservice` 看服务是否起来；`docker exec omservice netstat -tnlp | grep 1616`
 - **忘记控制台密码**：`docker exec omservice cat /etc/omservice.conf | grep LoginPwd`
+- **修改控制台密码**：`docker exec omservice sed -i 's/^LoginPwd=.*/LoginPwd="新密码"/' /etc/omservice.conf && docker restart omservice`。注意：若未把 conf 挂载到宿主机，重建容器后密码回退为默认 123456，建议完成「一、部署」末尾的 conf 挂载步骤
+- **HTTP 反向代理（含 1Panel 网站反代）连不上**：1616 是奥维私有 TCP 协议，不是 HTTP，七层反代（proxy_pass）无法承载。改用：① DNS A 记录指向服务器 IP，客户端直接填 `域名:1616`；② 或四层 TCP 转发（如 `socat TCP-LISTEN:端口,fork TCP:127.0.0.1:1616`），均无 TLS
 - **客户端看不到自定义地图**：客户端版本需 ≥ V9.0.0；确认控制台里图层已设为「本地代理」并保存
 - **卫星图加载不出/全黑**：按「四、代理打通」第 3 步的两层验证排查；确认投影类型选了「墨卡托全球」
-- **单文件不能超过 1M**：本镜像已配 `max_long_data_size=268435456`；若改库配置需重启容器
+- **单文件不能超过 1M**：本镜像已按官方要求配置 `max_allowed_packet=256M`（MariaDB 5.5）；若改库配置需重启容器
 
 ## 参考
 
