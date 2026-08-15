@@ -121,7 +121,7 @@ allow-lan: true
 
 - 镜像装有 proxychains-ng；`entrypoint.sh` 启动 omservice 时自动生成 `/etc/proxychains.conf`（宿主机地址优先取 `host.docker.internal`，兜底取容器默认网关；端口取环境变量 `PROXY_PORT`，默认 7890），然后用 `proxychains4` 拉起 omservice。
 - 配置里已用 `localnet` 排除 127.0.0.0/8 与私网段，**omservice 连本机 MySQL 不会走代理**。
-- 想换代理端口：compose 的 `environment` 里加 `PROXY_PORT: "端口号"`；想彻底停用代理（比如改用 TUN 透明代理）：设 `PROXY_PORT: "0"`。
+- 想换代理端口：compose 的 `environment` 里改 `PROXY_PORT`；自动探测的代理 IP 不对时（比如 Clash 在另一台机器或监听宿主机内网 IP），用 `PROXY_HOST` 手动指定数字 IP（如 `PROXY_HOST: "10.2.24.13"`）；想彻底停用代理（比如改用 TUN 透明代理）：设 `PROXY_PORT: "0"`。
 
 ### 3. 验证
 

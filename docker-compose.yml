@@ -33,5 +33,8 @@ services:
       # —— 代理：宿主机 HTTP 端口代理（Clash 7890）——
       # 已实测 omservice 不认 HTTP_PROXY 环境变量，镜像内置 proxychains 强制走代理（见 README 第四节）。
       # PROXY_PORT：宿主机代理端口，默认 7890；设为 "0" 则停用代理（如 Clash 已开 TUN 透明代理）。
+      # PROXY_HOST：代理 IP，默认自动探测（host.docker.internal / 容器默认网关）；
+      #             自动探测不对时手动指定（必须是数字 IP，proxychains 不认域名），例如宿主机内网 IP：
+      # PROXY_HOST: "10.2.24.13"
       # 前置：Clash 需开启 allow-lan（监听 0.0.0.0），容器才能经宿主机内网 IP 访问该端口。
       PROXY_PORT: "7890"

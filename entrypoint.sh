@@ -42,9 +42,9 @@ fi
 #    PROXY_PORT 默认 7890（宿主机 Clash 端口）；设 PROXY_PORT=0 可停用（如改用透明代理/TUN）。
 PROXY_PORT=${PROXY_PORT:-7890}
 if [ "$PROXY_PORT" != "0" ]; then
-    # 宿主机地址：优先 host.docker.internal（compose 已注入 host-gateway），兜底取默认网关 IP。
-    # 注意 proxychains 的 ProxyList 只接受数字 IP，所以先 getent 解析。
-    PROXY_IP=$(getent hosts host.docker.internal | awk '{print $1}' | head -1)
+    # 代理地址：优先环境变量 PROXY_HOST（必须是数字 IP，proxychains 不认域名）；
+    # 未设置时取 host.docker.internal（compose 已注入 host-gateway），兜底取容器默认网关 IP。
+    PROXY_IP=${PROXY_HOST:-$(getent hosts host.docker.internal | awk '{print $1}' | head -1)}
     if [ -z "$PROXY_IP" ]; then
         GWHEX=$(awk '$2=="00000000"{print $3}' /proc/net/route | head -1)
         PROXY_IP=$(printf "%d.%d.%d.%d" 0x${GWHEX:6:2} 0x${GWHEX:4:2} 0x${GWHEX:2:2} 0x${GWHEX:0:2})
