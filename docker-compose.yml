@@ -1,13 +1,20 @@
 # 奥维互动地图企业服务器（社区镜像 oakdb/omservice:3.3.3）
 # 镜像来源：https://github.com/Jetcser/omservice-docker
 # 基于 CentOS 6.10，内置 MySQL + omservice 3.3.3
+
+networks:
+    1panel-network:
+        external: true
+
 name: omservice   # 固定项目名，避免中文目录名导致 project name 报错
 services:
   omservice:
-    image: oakdb/omservice:3.3.3
+    # image: oakdb/omservice:3.3.3
     # 方案 B：使用本目录 Dockerfile 自建最新版镜像时，注释上面 image 行，改用下行
-    # build: .
+    build: .
     container_name: omservice
+    networks:
+      - 1panel-network
     restart: always
     ports:
       - "1616:1616"   # 奥维企业服务器端口（管理控制台、客户端均通过此端口连接）
@@ -26,6 +33,6 @@ services:
       # 前置：Clash 需开启 allow-lan（或绑定 0.0.0.0），容器才能经宿主机 IP 访问 7890。
       # 注意：omservice 是否遵循 HTTP_PROXY 环境变量未经官方确认，需按 README「四、代理打通」实测；
       # 不生效时用 README 中的 proxychains 方案。
-      # HTTP_PROXY: "http://host.docker.internal:7890"
-      # HTTPS_PROXY: "http://host.docker.internal:7890"
+      HTTP_PROXY: "http://host.docker.internal:7890"
+      HTTPS_PROXY: "http://host.docker.internal:7890"
       # NO_PROXY: "localhost,127.0.0.1"
