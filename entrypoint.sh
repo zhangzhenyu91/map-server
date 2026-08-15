@@ -17,11 +17,15 @@ mysqld_safe --user=mysql --datadir="$DATADIR" &
 
 # 3. 等待 MySQL 就绪（最多 60 秒）。
 #    初始化后 root 密码会被改为 ovital，所以两种凭据都试，保证容器重启后也能正确等待。
+#    注意必须探测 TCP(127.0.0.1:3306) 而不只是 socket——omservice 走 TCP 连接，
+#    只等 socket 就绪会出现 "OsDbManager::Init(), mysql_init error" 的启动竞态。
 echo "[entrypoint] 等待 MariaDB 就绪 ..."
 for i in $(seq 1 60); do
     if [ -S "$SOCK" ] && \
        { mysql -uroot -e 'select 1' >/dev/null 2>&1 || \
-         mysql -uroot -povital -e 'select 1' >/dev/null 2>&1; }; then
+         mysql -uroot -povital -e 'select 1' >/dev/null 2>&1; } && \
+       { mysql -uroot -h127.0.0.1 -P3306 -e 'select 1' >/dev/null 2>&1 || \
+         mysql -uroot -povital -h127.0.0.1 -P3306 -e 'select 1' >/dev/null 2>&1; }; then
         break
     fi
     if [ "$i" = 60 ]; then
